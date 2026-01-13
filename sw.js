@@ -1,3 +1,6 @@
+// Check if running in production environment
+const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol === 'https:';
+
 const CACHE_NAME = 'daily-activities-v2';
 const urlsToCache = [
   '/',
@@ -14,19 +17,30 @@ const urlsToCache = [
   '/assets/icon_512.png'
 ];
 
-// Install event - cache resources
+// Install event - cache resources (only in production)
 self.addEventListener('install', function(event) {
+  if (!isProduction) {
+    console.log('Service Worker installed in development mode - caching disabled');
+    return;
+  }
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        console.log('Opened cache');
+        console.log('Opened cache in production mode');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
-// Fetch event - serve from cache when offline
+// Fetch event - serve from cache when offline (only in production)
 self.addEventListener('fetch', function(event) {
+  // Skip caching in development
+  if (!isProduction) {
+    // Let the browser handle requests normally in development
+    return;
+  }
+
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
     return;
@@ -72,8 +86,13 @@ self.addEventListener('fetch', function(event) {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches (only in production)
 self.addEventListener('activate', function(event) {
+  if (!isProduction) {
+    console.log('Service Worker activated in development mode - cache cleanup skipped');
+    return;
+  }
+
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(

@@ -2,9 +2,8 @@ class DailyActivitiesTracker {
     constructor() {
         this.activities = this.loadActivities();
         this.lastResetDate = this.getLastResetDate();
-        this.draggedElement = null;
-        this.draggedIndex = null;
         this.history = this.loadHistory();
+
         this.init();
     }
 
@@ -44,7 +43,7 @@ class DailyActivitiesTracker {
         if (dismissPrompt) {
             dismissPrompt.addEventListener('click', () => {
                 document.getElementById('install-prompt').style.display = 'none';
-                installPromptShown = true;
+                window.installPromptShown = true;
             });
         }
 
@@ -55,12 +54,7 @@ class DailyActivitiesTracker {
             }
         });
 
-        // Add touch listener for mobile
-        document.addEventListener('touchstart', (e) => {
-            if (!e.target.closest('.activity-item') || e.target.classList.contains('activity-text')) {
-                this.dismissAllActions();
-            }
-        });
+
     }
 
     updateCurrentDate() {
@@ -112,6 +106,25 @@ class DailyActivitiesTracker {
         };
 
         this.saveHistory();
+    }
+
+    handleCheckboxClick(event, activityId) {
+        // Prevent event from propagating to drag handlers
+        event.stopPropagation();
+        event.preventDefault();
+
+        // Ensure checkbox state is properly updated
+        const checkbox = event.target;
+        const isChecked = checkbox.checked;
+
+        // Update activity state
+        const activity = this.activities.find(a => a.id === activityId);
+        if (activity) {
+            activity.completed = isChecked;
+            this.saveActivities();
+            this.updateCurrentDayHistory();
+            this.renderActivities();
+        }
     }
 
     recordDailyActivity() {
@@ -277,11 +290,13 @@ class DailyActivitiesTracker {
         console.log('Rendering activities with current order:', this.activities.map((a, i) => `${i}: ${a.name}`));
 
         container.innerHTML = this.activities.map((activity, index) => `
-            <div class="activity-item" data-activity-id="${activity.id}" data-index="${index}" draggable="true">
+            <div class="activity-item" data-activity-id="${activity.id}">
                 <input type="checkbox" 
                        class="activity-checkbox" 
+                       id="checkbox-${activity.id}"
                        ${activity.completed ? 'checked' : ''} 
-                       onchange="tracker.toggleActivity(${activity.id})">
+                       onchange="tracker.toggleActivity(${activity.id})"
+                       onclick="tracker.handleCheckboxClick(event, ${activity.id})">
                 <div class="activity-text ${activity.completed ? 'completed' : ''}">${activity.name}</div>
                 <button class="btn-more" onclick="tracker.toggleActions(${activity.id})">⋮</button>
                 <div class="activity-actions" id="actions-${activity.id}">
@@ -290,8 +305,6 @@ class DailyActivitiesTracker {
                 </div>
             </div>
         `).join('');
-
-        this.setupDragAndDrop();
     }
 
     toggleActions(id) {
@@ -371,167 +384,5 @@ class DailyActivitiesTracker {
         });
     }
 
-    setupDragAndDrop() {
-        const items = document.querySelectorAll('.activity-item');
 
-        items.forEach(item => {
-            // Desktop drag events
-            item.addEventListener('dragstart', (e) => this.handleDragStart(e));
-            item.addEventListener('dragover', (e) => this.handleDragOver(e));
-            item.addEventListener('drop', (e) => this.handleDrop(e));
-            item.addEventListener('dragend', (e) => this.handleDragEnd(e));
-            item.addEventListener('dragenter', (e) => this.handleDragEnter(e));
-            item.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-
-            // Mobile touch events
-            item.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
-            item.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
-            item.addEventListener('touchend', (e) => this.handleTouchEnd(e));
-        });
-    }
-
-    handleDragStart(e) {
-        this.draggedElement = e.target;
-        this.draggedIndex = parseInt(e.target.dataset.index);
-        e.target.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-    }
-
-    handleDragOver(e) {
-        if (e.preventDefault) {
-            e.preventDefault();
-        }
-        e.dataTransfer.dropEffect = 'move';
-        return false;
-    }
-
-    handleDragEnter(e) {
-        if (e.target.classList.contains('activity-item') && e.target !== this.draggedElement) {
-            e.target.classList.add('drag-over');
-        }
-    }
-
-    handleDragLeave(e) {
-        if (e.target.classList.contains('activity-item')) {
-            e.target.classList.remove('drag-over');
-        }
-    }
-
-    handleDrop(e) {
-        if (e.stopPropagation) {
-            e.stopPropagation();
-        }
-
-        const dropTarget = e.target.closest('.activity-item');
-        if (dropTarget && dropTarget !== this.draggedElement) {
-            const dropIndex = parseInt(dropTarget.dataset.index);
-            this.reorderActivities(this.draggedIndex, dropIndex);
-        }
-
-        return false;
-    }
-
-    handleDragEnd(e) {
-        const items = document.querySelectorAll('.activity-item');
-        items.forEach(item => {
-            item.classList.remove('dragging', 'drag-over');
-        });
-    }
-
-    handleTouchStart(e) {
-        const touch = e.touches[0];
-        const item = e.target.closest('.activity-item');
-
-        // Don't start drag if clicking on buttons or actions
-        if (e.target.closest('button') || e.target.closest('.activity-actions')) {
-            return;
-        }
-
-        if (item) {
-            this.draggedElement = item;
-            this.draggedIndex = parseInt(item.dataset.index);
-            this.touchOffset = {
-                x: touch.clientX - item.getBoundingClientRect().left,
-                y: touch.clientY - item.getBoundingClientRect().top
-            };
-            item.classList.add('dragging');
-            item.style.position = 'fixed';
-            item.style.zIndex = '1000';
-            item.style.width = item.offsetWidth + 'px';
-
-            // Prevent scrolling while dragging
-            e.preventDefault();
-        }
-    }
-
-    handleTouchMove(e) {
-        if (!this.draggedElement) return;
-
-        e.preventDefault();
-        const touch = e.touches[0];
-
-        this.draggedElement.style.left = (touch.clientX - this.touchOffset.x) + 'px';
-        this.draggedElement.style.top = (touch.clientY - this.touchOffset.y) + 'px';
-
-        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-        const dropTarget = elementBelow?.closest('.activity-item');
-
-        // Clear all drag-over states
-        document.querySelectorAll('.activity-item').forEach(item => {
-            item.classList.remove('drag-over');
-        });
-
-        // Add drag-over state to valid drop target
-        if (dropTarget && dropTarget !== this.draggedElement) {
-            dropTarget.classList.add('drag-over');
-            this.dropTarget = dropTarget;
-        } else {
-            this.dropTarget = null;
-        }
-    }
-
-    handleTouchEnd(e) {
-        if (!this.draggedElement) return;
-
-        // Use the stored drop target from touchmove
-        const dropTarget = this.dropTarget;
-
-        if (dropTarget && dropTarget !== this.draggedElement) {
-            const dropIndex = parseInt(dropTarget.dataset.index);
-            console.log(`Reordering: from index ${this.draggedIndex} to index ${dropIndex}`);
-            this.reorderActivities(this.draggedIndex, dropIndex);
-        }
-
-        // Reset styles
-        this.draggedElement.style.position = '';
-        this.draggedElement.style.zIndex = '';
-        this.draggedElement.style.width = '';
-        this.draggedElement.style.left = '';
-        this.draggedElement.style.top = '';
-
-        // Clear all drag states
-        document.querySelectorAll('.activity-item').forEach(item => {
-            item.classList.remove('dragging', 'drag-over');
-        });
-
-        // Reset drag state
-        this.draggedElement = null;
-        this.draggedIndex = null;
-        this.dropTarget = null;
-    }
-
-    reorderActivities(fromIndex, toIndex) {
-        // Don't reorder if indices are the same
-        if (fromIndex === toIndex) {
-            console.log('No reordering needed - same index');
-            return;
-        }
-
-        console.log(`Reordering activities: ${fromIndex} -> ${toIndex}`);
-
-        const [movedItem] = this.activities.splice(fromIndex, 1);
-        this.activities.splice(toIndex, 0, movedItem);
-        this.saveActivities();
-        this.renderActivities();
-    }
 }

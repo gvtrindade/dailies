@@ -184,9 +184,7 @@ button:hover {
     align-items: center;
     gap: 15px;
     transition: transform 0.2s, box-shadow 0.2s;
-    cursor: move;
     position: relative;
-    touch-action: none; /* Prevent default touch actions for drag */
 }
 
 .activity-item:hover {
@@ -194,17 +192,7 @@ button:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.activity-item.dragging {
-    opacity: 0.5;
-    transform: rotate(5deg);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-}
 
-.activity-item.drag-over {
-    background: #e8f4fd;
-    border: 2px dashed #667eea;
-    transform: scale(1.02);
-}
 
 .btn-more {
     background: transparent;
@@ -216,7 +204,6 @@ button:hover {
     transition: background-color 0.3s, color 0.3s;
     border: none;
     display: none;
-    touch-action: manipulation; /* Allow touch on buttons during drag */
 }
 
 .btn-more:hover {
@@ -228,6 +215,18 @@ button:hover {
     width: 24px;
     height: 24px;
     cursor: pointer;
+    accent-color: #667eea;
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Remove default padding */
+}
+
+/* Mobile checkbox fixes */
+.activity-checkbox:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.activity-checkbox:checked {
     accent-color: #667eea;
 }
 
@@ -261,7 +260,6 @@ button:hover {
     right: 15px;
     top: 50%;
     transform: translateY(-50%) translateX(100%);
-    touch-action: manipulation; /* Allow touch on buttons during drag */
 }
 
 .activity-actions.show {

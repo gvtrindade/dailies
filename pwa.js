@@ -1,19 +1,25 @@
-// Register service worker
+// Register service worker only in production
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function (registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol === 'https:';
+        
+        if (isProduction) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function (registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
-                // Check for service worker updates
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    console.log('New service worker found');
+                    // Check for service worker updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        console.log('New service worker found');
+                    });
+                })
+                .catch(function (err) {
+                    console.log('ServiceWorker registration failed: ', err);
                 });
-            })
-            .catch(function (err) {
-                console.log('ServiceWorker registration failed: ', err);
-            });
+        } else {
+            console.log('Development mode detected - ServiceWorker registration skipped');
+        }
     });
 } else {
     console.log('Service workers not supported');

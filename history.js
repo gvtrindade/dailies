@@ -220,16 +220,22 @@ class ActivityHistory {
     }
 }
 
-// Register service worker
+// Register service worker only in production
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(function(err) {
-                console.log('ServiceWorker registration failed: ', err);
-            });
+        const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol === 'https:';
+        
+        if (isProduction) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+        } else {
+            console.log('Development mode detected - ServiceWorker registration skipped');
+        }
     });
 }
 
