@@ -1,0 +1,397 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 40px;
+    color: white;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+#current-date {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.header-nav {
+    margin-top: 15px;
+}
+
+.btn-history {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background-color 0.3s;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-history:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-install {
+    background: #48bb78;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-install:hover {
+    background: #38a169;
+}
+
+.install-prompt {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+
+.install-prompt-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.install-prompt-content span {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.btn-dismiss {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-dismiss:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+main {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.add-activity {
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.add-activity h2 {
+    margin-bottom: 15px;
+    color: #667eea;
+}
+
+#activity-form {
+    display: flex;
+    gap: 10px;
+}
+
+#activity-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+#activity-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+button {
+    padding: 12px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background: #5a67d8;
+}
+
+.activities-list h2 {
+    margin-bottom: 20px;
+    color: #667eea;
+}
+
+.empty-state {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    padding: 40px;
+}
+
+.activity-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: move;
+    position: relative;
+    touch-action: none; /* Prevent default touch actions for drag */
+}
+
+.activity-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.activity-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.activity-item.drag-over {
+    background: #e8f4fd;
+    border: 2px dashed #667eea;
+    transform: scale(1.02);
+}
+
+.btn-more {
+    background: transparent;
+    color: #999;
+    font-size: 20px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    border: none;
+    display: none;
+    touch-action: manipulation; /* Allow touch on buttons during drag */
+}
+
+.btn-more:hover {
+    background: #e0e0e0;
+    color: #667eea;
+}
+
+.activity-checkbox {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.activity-text {
+    flex: 1;
+    font-size: 16px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.activity-text.editing {
+    background: white;
+    border-color: #667eea;
+}
+
+.activity-text.completed {
+    text-decoration: line-through;
+    color: #999;
+}
+
+.activity-actions {
+    display: flex;
+    gap: 8px;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%) translateX(100%);
+    touch-action: manipulation; /* Allow touch on buttons during drag */
+}
+
+.activity-actions.show {
+    transform: translateY(-50%) translateX(0);
+    opacity: 1;
+}
+
+.btn-edit, .btn-delete, .btn-save, .btn-cancel {
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-edit {
+    background: #48bb78;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #38a169;
+}
+
+.btn-delete {
+    background: #f56565;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #e53e3e;
+}
+
+.btn-save {
+    background: #4299e1;
+    color: white;
+}
+
+.btn-save:hover {
+    background: #3182ce;
+}
+
+.btn-cancel {
+    background: #a0aec0;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #718096;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+    
+    main {
+        padding: 20px;
+    }
+    
+    #activity-form {
+        flex-direction: column;
+    }
+    
+    .activity-item {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding-right: 80px;
+        overflow: hidden;
+    }
+    
+    .activity-checkbox {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+    
+    .activity-text {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .btn-more {
+        display: block;
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 8px 10px;
+    }
+    
+    .activity-actions {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%) translateX(100%);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        background: white;
+        padding: 5px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 10;
+    }
+    
+    .activity-actions.show {
+        transform: translateY(-50%) translateX(0);
+        opacity: 1;
+    }
+    
+    .btn-edit, .btn-delete {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+}
+
+@media (min-width: 601px) {
+    .activity-actions {
+        display: flex;
+        transform: none;
+        opacity: 1;
+        position: static;
+        gap: 8px;
+    }
+    
+    .btn-more {
+        display: none;
+    }
+}

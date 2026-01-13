@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity History - Daily Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="history.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Daily Tracker">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Activity History</h1>
+            <div class="nav-buttons">
+                <a href="index.html" class="btn-nav">← Back to Activities</a>
+                <button id="export-csv" class="btn-export">📊 Export to CSV</button>
+                <button id="install-btn" class="btn-install" style="display: none;">📱 Install App</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="history-controls">
+                <div class="date-filter">
+                    <label for="start-date">From:</label>
+                    <input type="date" id="start-date">
+                    <label for="end-date">To:</label>
+                    <input type="date" id="end-date">
+                    <button id="filter-btn">Filter</button>
+                    <button id="clear-filter">Clear</button>
+                </div>
+            </section>
+
+            <section class="history-summary">
+                <div class="summary-stats">
+                    <div class="stat-card">
+                        <h3>Total Days</h3>
+                        <span id="total-days">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Completion Rate</h3>
+                        <span id="completion-rate">0%</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Most Completed</h3>
+                        <span id="most-completed">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="history-list">
+                <h2>Daily Records</h2>
+                <div id="history-container">
+                    <p class="empty-state">No history records found.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="history.js"></script>
+</body>
+</html>

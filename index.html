@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Activities Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Daily Tracker">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Daily Activities</h1>
+            <p id="current-date"></p>
+            <div class="header-nav">
+                <a href="history.html" class="btn-history">📊 View History</a>
+                <button id="install-btn" class="btn-install" style="display: none;">📱 Install App</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="install-prompt" class="install-prompt" style="display: none;">
+                <div class="install-prompt-content">
+                    <span>📱 Install Daily Tracker for a better experience!</span>
+                    <button id="install-prompt-btn" class="btn-install">Install</button>
+                    <button id="dismiss-prompt" class="btn-dismiss">Later</button>
+                </div>
+            </div>
+
+            <section class="add-activity">
+                <h2>Add New Activity</h2>
+                <form id="activity-form">
+                    <input type="text" id="activity-input" placeholder="Enter activity names separated by ;" required>
+                    <button type="submit">Add Activity</button>
+                </form>
+            </section>
+
+            <section class="activities-list">
+                <h2>Your Activities</h2>
+                <div id="activities-container">
+                    <p class="empty-state">No activities yet. Add your first activity above!</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="pwa.js"></script>
+</body>
+</html>
