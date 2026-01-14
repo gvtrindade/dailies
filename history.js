@@ -32,29 +32,6 @@ class ActivityHistory {
         localStorage.setItem('activityHistory', JSON.stringify(this.history));
     }
 
-    recordDailyActivity() {
-        // Get the current "day" based on the 3 AM reset logic
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const currentDay = now.getHours() >= 3 ? today : new Date(today.getTime() - (24 * 60 * 60 * 1000));
-        const dayKey = currentDay.toISOString().split('T')[0];
-        
-        const activities = this.loadActivities();
-        
-        this.history[dayKey] = {
-            activities: activities.map(activity => ({
-                id: activity.id,
-                name: activity.name,
-                completed: activity.completed,
-                timestamp: new Date().toISOString()
-            })),
-            totalActivities: activities.length,
-            completedActivities: activities.filter(a => a.completed).length
-        };
-        
-        this.saveHistory();
-    }
-
     setDefaultDates() {
         const today = new Date();
         const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));

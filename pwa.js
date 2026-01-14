@@ -236,10 +236,8 @@ setTimeout(checkPWACompatibility, 1000);
 // Initialize the tracker when the page loads
 const tracker = new DailyActivitiesTracker();
 
-// Record activity when page unloads (for manual history tracking)
-window.addEventListener('beforeunload', () => {
-    tracker.recordDailyActivity();
-});
+// Current day activities are no longer saved on page unload
+// They are only saved during the 3 AM reset to ensure only previous days are recorded
 
 // Install prompt for PWA
 let deferredPrompt;
