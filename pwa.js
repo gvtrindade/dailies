@@ -1,8 +1,8 @@
 // Register service worker only in production
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-        const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol === 'https:';
-        
+        const isProduction = location.hostname.includes("dailies.trindade.dev");
+
         if (isProduction) {
             navigator.serviceWorker.register('/sw.js')
                 .then(function (registration) {
@@ -12,7 +12,7 @@ if ('serviceWorker' in navigator) {
                     registration.addEventListener('updatefound', () => {
                         const newWorker = registration.installing;
                         console.log('New service worker found');
-                        
+
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                 // New service worker is available, show update prompt
@@ -46,28 +46,28 @@ function showUpdatePrompt() {
     const lastDismissal = localStorage.getItem('updateLastDismissed');
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
-    
+
     if (lastDismissal && (now - parseInt(lastDismissal)) > twentyFourHours) {
         // Auto-update after 24 hours
         console.log('Auto-updating after 24 hours');
         applyUpdate();
         return;
     }
-    
+
     if (updateDismissedCount >= UPDATE_DISMISSAL_THRESHOLD) {
         // Auto-update after 3 dismissals
         console.log('Auto-updating after 3 dismissals');
         applyUpdate();
         return;
     }
-    
+
     // Don't show if already shown in this session
     if (updatePromptShown) {
         return;
     }
-    
+
     updatePromptShown = true;
-    
+
     // Create update banner
     const updateBanner = document.createElement('div');
     updateBanner.id = 'update-banner';
@@ -81,19 +81,19 @@ function showUpdatePrompt() {
             </div>
         </div>
     `;
-    
+
     // Add to page
     document.body.appendChild(updateBanner);
-    
+
     // Add event listeners
     document.getElementById('update-now-btn').addEventListener('click', () => {
         applyUpdate();
     });
-    
+
     document.getElementById('update-later-btn').addEventListener('click', () => {
         dismissUpdateBanner();
     });
-    
+
     // Show with animation
     setTimeout(() => {
         updateBanner.classList.add('show');
@@ -102,18 +102,18 @@ function showUpdatePrompt() {
 
 function applyUpdate() {
     console.log('Applying update...');
-    
+
     // Remove banner
     const banner = document.getElementById('update-banner');
     if (banner) {
         banner.remove();
     }
-    
+
     // Tell service worker to skip waiting
     if (navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
     }
-    
+
     // Reload page after a short delay
     setTimeout(() => {
         window.location.reload();
@@ -122,12 +122,12 @@ function applyUpdate() {
 
 function dismissUpdateBanner() {
     console.log('Update dismissed');
-    
+
     // Update dismissal count and timestamp
     updateDismissedCount++;
     localStorage.setItem('updateDismissedCount', updateDismissedCount.toString());
     localStorage.setItem('updateLastDismissed', Date.now().toString());
-    
+
     // Remove banner with animation
     const banner = document.getElementById('update-banner');
     if (banner) {

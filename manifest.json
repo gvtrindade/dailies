@@ -1,6 +1,6 @@
 {
-  "name": "Daily Activities Tracker",
-  "short_name": "Daily Tracker",
+  "name": "dailies",
+  "short_name": "dailies",
   "description": "Track and manage your daily activities with completion history",
   "start_url": "/",
   "display": "standalone",

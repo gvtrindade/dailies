@@ -1,8 +1,8 @@
 // Check if running in production environment
-const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol === 'https:';
+const isProduction = location.hostname.includes("dailies.trindade.dev");
 
 // Dynamic cache version with timestamp
-const CACHE_VERSION = 'v2.1';
+const CACHE_VERSION = 'v2.2';
 const CACHE_NAME = `daily-activities-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
@@ -13,10 +13,39 @@ const urlsToCache = [
   '/script.js',
   '/history.js',
   '/manifest.json',
-  '/assets/icon_144.png',
-  '/assets/icon_192.png',
-  '/assets/icon_256.png',
-  '/assets/icon_512.png'
+  '/assets/favicon.ico',
+  '/assets/icons/android/android-launchericon-512-512.png',
+  '/assets/icons/android/android-launchericon-192-192.png',
+  '/assets/icons/android/android-launchericon-144-144.png',
+  '/assets/icons/android/android-launchericon-96-96.png',
+  '/assets/icons/android/android-launchericon-72-72.png',
+  '/assets/icons/android/android-launchericon-48-48.png',
+  '/assets/icons/ios/16.png',
+  '/assets/icons/ios/20.png',
+  '/assets/icons/ios/29.png',
+  '/assets/icons/ios/32.png',
+  '/assets/icons/ios/40.png',
+  '/assets/icons/ios/50.png',
+  '/assets/icons/ios/57.png',
+  '/assets/icons/ios/58.png',
+  '/assets/icons/ios/60.png',
+  '/assets/icons/ios/64.png',
+  '/assets/icons/ios/72.png',
+  '/assets/icons/ios/76.png',
+  '/assets/icons/ios/80.png',
+  '/assets/icons/ios/87.png',
+  '/assets/icons/ios/100.png',
+  '/assets/icons/ios/114.png',
+  '/assets/icons/ios/120.png',
+  '/assets/icons/ios/128.png',
+  '/assets/icons/ios/144.png',
+  '/assets/icons/ios/152.png',
+  '/assets/icons/ios/167.png',
+  '/assets/icons/ios/180.png',
+  '/assets/icons/ios/192.png',
+  '/assets/icons/ios/256.png',
+  '/assets/icons/ios/512.png',
+  '/assets/icons/ios/1024.png'
 ];
 
 // Install event - cache resources (only in production)
