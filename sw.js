@@ -1,7 +1,9 @@
 // Check if running in production environment
 const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol === 'https:';
 
-const CACHE_NAME = 'daily-activities-v2';
+// Dynamic cache version with timestamp
+const CACHE_VERSION = 'v2.1';
+const CACHE_NAME = `daily-activities-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',
   '/index.html',
@@ -21,7 +23,7 @@ const urlsToCache = [
 self.addEventListener('install', function(event) {
   if (!isProduction) {
     console.log('Service Worker installed in development mode - caching disabled');
-    return;
+    return self.skipWaiting();
   }
 
   event.waitUntil(
@@ -29,6 +31,11 @@ self.addEventListener('install', function(event) {
       .then(function(cache) {
         console.log('Opened cache in production mode');
         return cache.addAll(urlsToCache);
+      })
+      .then(function() {
+        console.log('Service Worker installed successfully');
+        // Force the new service worker to become active immediately
+        return self.skipWaiting();
       })
   );
 });
@@ -90,7 +97,7 @@ self.addEventListener('fetch', function(event) {
 self.addEventListener('activate', function(event) {
   if (!isProduction) {
     console.log('Service Worker activated in development mode - cache cleanup skipped');
-    return;
+    return self.clients.claim();
   }
 
   event.waitUntil(
@@ -103,6 +110,17 @@ self.addEventListener('activate', function(event) {
           }
         })
       );
+    }).then(function() {
+      console.log('Service Worker activated successfully');
+      // Take control of all open pages immediately
+      return self.clients.claim();
     })
   );
+});
+
+// Handle messages from the main thread
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

@@ -393,3 +393,101 @@ button:hover {
         display: none;
     }
 }
+
+/* Update Banner Styles */
+.update-banner {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 320px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.update-banner.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.update-banner-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.update-message {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.update-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.btn-update-now, .btn-update-later {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-update-now {
+    background: rgba(255, 255, 255, 0.9);
+    color: #667eea;
+}
+
+.btn-update-now:hover {
+    background: white;
+    transform: translateY(-1px);
+}
+
+.btn-update-later {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-update-later:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+    .update-banner {
+        bottom: 15px;
+        right: 15px;
+        left: 15px;
+        max-width: none;
+        padding: 12px 15px;
+    }
+    
+    .update-message {
+        font-size: 13px;
+    }
+    
+    .btn-update-now, .btn-update-later {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+    
+    .update-actions {
+        justify-content: space-between;
+    }
+}

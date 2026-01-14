@@ -229,6 +229,23 @@ if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .then(function(registration) {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
+
+                    // Check for service worker updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        console.log('New service worker found');
+                        
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New service worker is available, show update prompt
+                                console.log('New version available');
+                                showUpdatePrompt();
+                            }
+                        });
+                    });
+
+                    // Check for updates immediately
+                    registration.update();
                 })
                 .catch(function(err) {
                     console.log('ServiceWorker registration failed: ', err);
@@ -237,7 +254,114 @@ if ('serviceWorker' in navigator) {
             console.log('Development mode detected - ServiceWorker registration skipped');
         }
     });
+} else {
+    console.log('Service workers not supported');
 }
+
+// Update management (shared with main page)
+let updatePromptShown = false;
+let updateDismissedCount = 0;
+const UPDATE_DISMISSAL_THRESHOLD = 3; // Auto-update after 3 dismissals
+
+function showUpdatePrompt() {
+    // Check if we should auto-update after 24 hours or 3 dismissals
+    const lastDismissal = localStorage.getItem('updateLastDismissed');
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    
+    if (lastDismissal && (now - parseInt(lastDismissal)) > twentyFourHours) {
+        // Auto-update after 24 hours
+        console.log('Auto-updating after 24 hours');
+        applyUpdate();
+        return;
+    }
+    
+    if (updateDismissedCount >= UPDATE_DISMISSAL_THRESHOLD) {
+        // Auto-update after 3 dismissals
+        console.log('Auto-updating after 3 dismissals');
+        applyUpdate();
+        return;
+    }
+    
+    // Don't show if already shown in this session
+    if (updatePromptShown) {
+        return;
+    }
+    
+    updatePromptShown = true;
+    
+    // Create update banner
+    const updateBanner = document.createElement('div');
+    updateBanner.id = 'update-banner';
+    updateBanner.className = 'update-banner';
+    updateBanner.innerHTML = `
+        <div class="update-banner-content">
+            <span class="update-message">🔄 New version available</span>
+            <div class="update-actions">
+                <button id="update-now-btn" class="btn-update-now">Refresh Now</button>
+                <button id="update-later-btn" class="btn-update-later">Later</button>
+            </div>
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(updateBanner);
+    
+    // Add event listeners
+    document.getElementById('update-now-btn').addEventListener('click', () => {
+        applyUpdate();
+    });
+    
+    document.getElementById('update-later-btn').addEventListener('click', () => {
+        dismissUpdateBanner();
+    });
+    
+    // Show with animation
+    setTimeout(() => {
+        updateBanner.classList.add('show');
+    }, 100);
+}
+
+function applyUpdate() {
+    console.log('Applying update...');
+    
+    // Remove banner
+    const banner = document.getElementById('update-banner');
+    if (banner) {
+        banner.remove();
+    }
+    
+    // Tell service worker to skip waiting
+    if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+    }
+    
+    // Reload page after a short delay
+    setTimeout(() => {
+        window.location.reload();
+    }, 100);
+}
+
+function dismissUpdateBanner() {
+    console.log('Update dismissed');
+    
+    // Update dismissal count and timestamp
+    updateDismissedCount++;
+    localStorage.setItem('updateDismissedCount', updateDismissedCount.toString());
+    localStorage.setItem('updateLastDismissed', Date.now().toString());
+    
+    // Remove banner with animation
+    const banner = document.getElementById('update-banner');
+    if (banner) {
+        banner.classList.remove('show');
+        setTimeout(() => {
+            banner.remove();
+        }, 300);
+    }
+}
+
+// Load dismissal count from localStorage
+updateDismissedCount = parseInt(localStorage.getItem('updateDismissedCount') || '0');
 
 // Initialize history page
 const historyTracker = new ActivityHistory();
