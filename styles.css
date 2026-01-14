@@ -491,3 +491,59 @@ button:hover {
         justify-content: space-between;
     }
 }
+
+/* Reorder Mode Styles */
+.btn-reorder {
+    background: #ed8936;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 10px;
+}
+
+.btn-reorder:hover {
+    background: #dd6b20;
+}
+
+.btn-reorder.active {
+    background: #48bb78;
+}
+
+.btn-reorder.active:hover {
+    background: #38a169;
+}
+
+.activity-item.reorder-mode {
+    cursor: move;
+    user-select: none;
+}
+
+.activity-item.dragging {
+    opacity: 0.5;
+    background: #e0e0e0;
+}
+
+.drag-handle {
+    font-size: 20px;
+    color: #999;
+    cursor: grab;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.activity-item.reorder-mode:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}

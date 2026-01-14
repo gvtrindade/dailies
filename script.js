@@ -3,6 +3,9 @@ class DailyActivitiesTracker {
         this.activities = this.loadActivities();
         this.lastResetDate = this.getLastResetDate();
         this.history = this.loadHistory();
+        this.isReorderMode = false;
+        this.draggedElement = null;
+        this.draggedIndex = null;
 
         this.init();
     }
@@ -25,6 +28,12 @@ class DailyActivitiesTracker {
             e.preventDefault();
             this.addActivity();
         });
+
+        // Reorder button click handler
+        const reorderBtn = document.getElementById('reorder-btn');
+        if (reorderBtn) {
+            reorderBtn.addEventListener('click', () => this.toggleReorderMode());
+        }
 
         // Install button click handler
         const installBtn = document.getElementById('install-btn');
@@ -53,8 +62,90 @@ class DailyActivitiesTracker {
                 this.dismissAllActions();
             }
         });
+    }
 
+    toggleReorderMode() {
+        this.isReorderMode = !this.isReorderMode;
+        const reorderBtn = document.getElementById('reorder-btn');
 
+        if (this.isReorderMode) {
+            reorderBtn.textContent = '✓ Finish';
+            reorderBtn.classList.add('active');
+        } else {
+            reorderBtn.textContent = '↕️ Reorder';
+            reorderBtn.classList.remove('active');
+        }
+
+        this.renderActivities();
+    }
+
+    setupDragAndDrop(element, index) {
+        element.setAttribute('draggable', 'true');
+
+        element.addEventListener('dragstart', (e) => {
+            this.draggedElement = element;
+            this.draggedIndex = index;
+            element.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', element.innerHTML);
+        });
+
+        element.addEventListener('dragend', (e) => {
+            element.classList.remove('dragging');
+            this.draggedElement = null;
+            this.draggedIndex = null;
+        });
+
+        element.addEventListener('dragover', (e) => {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+
+            const container = document.getElementById('activities-container');
+            const afterElement = this.getDragAfterElement(container, e.clientY);
+
+            if (afterElement == null) {
+                container.appendChild(this.draggedElement);
+            } else {
+                container.insertBefore(this.draggedElement, afterElement);
+            }
+
+            return false;
+        });
+
+        element.addEventListener('drop', (e) => {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            if (this.draggedIndex !== null) {
+                const newIndex = Array.from(element.parentNode.children).indexOf(this.draggedElement);
+
+                if (this.draggedIndex !== newIndex) {
+                    const [movedItem] = this.activities.splice(this.draggedIndex, 1);
+                    this.activities.splice(newIndex, 0, movedItem);
+                    this.saveActivities();
+                }
+            }
+
+            return false;
+        });
+    }
+
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.activity-item:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
     updateCurrentDate() {
@@ -93,7 +184,6 @@ class DailyActivitiesTracker {
 
     updateCurrentDayHistory() {
         const dayKey = this.getCurrentDayKey();
-
         this.history[dayKey] = {
             activities: this.activities.map(activity => ({
                 id: activity.id,
@@ -104,11 +194,15 @@ class DailyActivitiesTracker {
             totalActivities: this.activities.length,
             completedActivities: this.activities.filter(a => a.completed).length
         };
-
         this.saveHistory();
     }
 
     handleCheckboxClick(event, activityId) {
+        if (this.isReorderMode) {
+            event.preventDefault();
+            return;
+        }
+
         // Prevent event from propagating to drag handlers
         event.stopPropagation();
         event.preventDefault();
@@ -129,7 +223,6 @@ class DailyActivitiesTracker {
 
     recordDailyActivity() {
         const dayKey = this.getCurrentDayKey();
-
         this.history[dayKey] = {
             activities: this.activities.map(activity => ({
                 id: activity.id,
@@ -140,7 +233,6 @@ class DailyActivitiesTracker {
             totalActivities: this.activities.length,
             completedActivities: this.activities.filter(a => a.completed).length
         };
-
         this.saveHistory();
     }
 
@@ -166,7 +258,6 @@ class DailyActivitiesTracker {
         if (now.getHours() >= 3 && (!lastReset || lastReset < today)) {
             // Record yesterday's activity before reset - use getCurrentDayKey to get correct day
             const yesterdayKey = this.getCurrentDayKeyForDate(new Date(today.getTime() - (24 * 60 * 60 * 1000)));
-
             if (!this.history[yesterdayKey]) {
                 this.history[yesterdayKey] = {
                     activities: this.activities.map(activity => ({
@@ -216,6 +307,8 @@ class DailyActivitiesTracker {
     }
 
     toggleActivity(id) {
+        if (this.isReorderMode) return;
+
         const activity = this.activities.find(a => a.id === id);
         if (activity) {
             activity.completed = !activity.completed;
@@ -226,6 +319,8 @@ class DailyActivitiesTracker {
     }
 
     deleteActivity(id) {
+        if (this.isReorderMode) return;
+
         this.activities = this.activities.filter(a => a.id !== id);
         this.saveActivities();
         this.updateCurrentDayHistory();
@@ -233,6 +328,8 @@ class DailyActivitiesTracker {
     }
 
     startEdit(id) {
+        if (this.isReorderMode) return;
+
         const activityElement = document.querySelector(`[data-activity-id="${id}"]`);
         const textElement = activityElement.querySelector('.activity-text');
         const actionsElement = activityElement.querySelector('.activity-actions');
@@ -279,6 +376,35 @@ class DailyActivitiesTracker {
         this.renderActivities();
     }
 
+    dismissAllActions() {
+        const allActionsElements = document.querySelectorAll('.activity-actions.show');
+        allActionsElements.forEach(el => el.classList.remove('show'));
+
+        const allMoreButtons = document.querySelectorAll('.btn-more');
+        allMoreButtons.forEach(btn => {
+            if (window.innerWidth < 601) {
+                btn.style.display = 'block';
+            }
+        });
+    }
+
+    toggleActions(id) {
+        if (this.isReorderMode) return;
+
+        const activityElement = document.querySelector(`[data-activity-id="${id}"]`);
+        const actionsElement = activityElement.querySelector('.activity-actions');
+        const moreButton = activityElement.querySelector('.btn-more');
+
+        const isCurrentlyShown = actionsElement.classList.contains('show');
+
+        this.dismissAllActions();
+
+        if (!isCurrentlyShown) {
+            actionsElement.classList.add('show');
+            moreButton.style.display = 'none';
+        }
+    }
+
     renderActivities() {
         const container = document.getElementById('activities-container');
 
@@ -290,99 +416,29 @@ class DailyActivitiesTracker {
         console.log('Rendering activities with current order:', this.activities.map((a, i) => `${i}: ${a.name}`));
 
         container.innerHTML = this.activities.map((activity, index) => `
-            <div class="activity-item" data-activity-id="${activity.id}">
-                <input type="checkbox" 
-                       class="activity-checkbox" 
-                       id="checkbox-${activity.id}"
-                       ${activity.completed ? 'checked' : ''} 
-                       onchange="tracker.toggleActivity(${activity.id})"
-                       onclick="tracker.handleCheckboxClick(event, ${activity.id})">
-                <div class="activity-text ${activity.completed ? 'completed' : ''}">${activity.name}</div>
-                <button class="btn-more" onclick="tracker.toggleActions(${activity.id})">⋮</button>
-                <div class="activity-actions" id="actions-${activity.id}">
-                    <button class="btn-edit" onclick="tracker.startEdit(${activity.id})">Edit</button>
-                    <button class="btn-delete" onclick="tracker.deleteActivity(${activity.id})">Delete</button>
-                </div>
+            <div class="activity-item ${this.isReorderMode ? 'reorder-mode' : ''}" data-activity-id="${activity.id}">
+                ${this.isReorderMode ? '<div class="drag-handle">☰</div>' : ''}
+                ${!this.isReorderMode ? `<input type="checkbox" class="activity-checkbox" ${activity.completed ? 'checked' : ''} onchange="tracker.handleCheckboxClick(event, ${activity.id})">` : ''}
+                <span class="activity-text ${activity.completed ? 'completed' : ''}">${activity.name}</span>
+                ${!this.isReorderMode ? `
+                    <button class="btn-more" onclick="tracker.toggleActions(${activity.id})">⋮</button>
+                    <div class="activity-actions">
+                        <button class="btn-edit" onclick="tracker.startEdit(${activity.id})">Edit</button>
+                        <button class="btn-delete" onclick="tracker.deleteActivity(${activity.id})">Delete</button>
+                    </div>
+                ` : ''}
             </div>
         `).join('');
-    }
 
-    toggleActions(id) {
-        const actionsElement = document.getElementById(`actions-${id}`);
-        const allActions = document.querySelectorAll('.activity-actions');
-
-        // Close all other action menus
-        allActions.forEach(actions => {
-            if (actions.id !== `actions-${id}`) {
-                actions.classList.remove('show');
-            }
-        });
-
-        // Toggle current action menu
-        actionsElement.classList.toggle('show');
-    }
-
-    dismissAllActions() {
-        const allActions = document.querySelectorAll('.activity-actions');
-        allActions.forEach(actions => {
-            actions.classList.remove('show');
-        });
-    }
-
-    promptInstall() {
-        console.log('Install prompt triggered');
-
-        if (!deferredPrompt) {
-            // Enhanced debugging for mobile
-            console.error('Install prompt not available');
-
-            const debugInfo = {
-                userAgent: navigator.userAgent,
-                isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-                isStandalone: window.matchMedia('(display-mode: standalone)').matches,
-                hasServiceWorker: !!navigator.serviceWorker,
-                hasManifest: !!document.querySelector('link[rel="manifest"]'),
-                protocol: location.protocol,
-                hostname: location.hostname,
-                https: location.protocol === 'https:' || location.hostname === 'localhost'
-            };
-
-            console.log('Debug info:', debugInfo);
-
-            // Check for specific mobile issues
-            const issues = [];
-            if (!debugInfo.https) issues.push('HTTPS required');
-            if (!debugInfo.hasServiceWorker) issues.push('Service Worker not supported');
-            if (!debugInfo.hasManifest) issues.push('Manifest not found');
-
-            const message = issues.length > 0
-                ? `Cannot install: ${issues.join(', ')}. Try:\n\n1. Using HTTPS or localhost\n2. Spending 30+ seconds on site\n3. Tapping/clicking around the app\n4. Checking storage space\n5. Updating Chrome to latest version`
-                : 'Install not available. Make sure you spend at least 30 seconds on the site and tap around before trying to install.';
-
-            alert(message);
-            return;
+        // Setup drag and drop for reorder mode
+        if (this.isReorderMode) {
+            const activityItems = container.querySelectorAll('.activity-item');
+            activityItems.forEach((item, index) => {
+                this.setupDragAndDrop(item, index);
+            });
         }
-
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-            console.log(`User response to install prompt: ${choiceResult.outcome}`);
-            deferredPrompt = null;
-
-            // Hide prompt regardless of choice
-            document.getElementById('install-prompt').style.display = 'none';
-            const installBtn = document.getElementById('install-btn');
-            if (installBtn) installBtn.style.display = 'none';
-
-            if (choiceResult.outcome === 'accepted') {
-                console.log('PWA installation accepted');
-                // Record successful installation
-                localStorage.setItem('pwaInstalled', 'true');
-                localStorage.setItem('pwaInstallDate', new Date().toISOString());
-            } else {
-                console.log('PWA installation declined');
-            }
-        });
     }
-
-
 }
+
+// Initialize the tracker
+const tracker = new DailyActivitiesTracker();
