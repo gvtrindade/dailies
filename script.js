@@ -182,6 +182,21 @@ class DailyActivitiesTracker {
         return date.toISOString().split('T')[0];
     }
 
+    updateCurrentDayHistory() {
+        const dayKey = this.getCurrentDayKey();
+        this.history[dayKey] = {
+            activities: this.activities.map(activity => ({
+                id: activity.id,
+                name: activity.name,
+                completed: activity.completed,
+                timestamp: new Date().toISOString()
+            })),
+            totalActivities: this.activities.length,
+            completedActivities: this.activities.filter(a => a.completed).length
+        };
+        this.saveHistory();
+    }
+
     handleCheckboxClick(event, activityId) {
         if (this.isReorderMode) {
             event.preventDefault();
@@ -201,8 +216,24 @@ class DailyActivitiesTracker {
         if (activity) {
             activity.completed = isChecked;
             this.saveActivities();
+            this.updateCurrentDayHistory();
             this.renderActivities();
         }
+    }
+
+    recordDailyActivity() {
+        const dayKey = this.getCurrentDayKey();
+        this.history[dayKey] = {
+            activities: this.activities.map(activity => ({
+                id: activity.id,
+                name: activity.name,
+                completed: activity.completed,
+                timestamp: new Date().toISOString()
+            })),
+            totalActivities: this.activities.length,
+            completedActivities: this.activities.filter(a => a.completed).length
+        };
+        this.saveHistory();
     }
 
     saveActivities() {
@@ -282,6 +313,7 @@ class DailyActivitiesTracker {
         if (activity) {
             activity.completed = !activity.completed;
             this.saveActivities();
+            this.updateCurrentDayHistory();
             this.renderActivities();
         }
     }
@@ -291,6 +323,7 @@ class DailyActivitiesTracker {
 
         this.activities = this.activities.filter(a => a.id !== id);
         this.saveActivities();
+        this.updateCurrentDayHistory();
         this.renderActivities();
     }
 
@@ -331,6 +364,7 @@ class DailyActivitiesTracker {
             if (activity) {
                 activity.name = newName;
                 this.saveActivities();
+                this.updateCurrentDayHistory();
                 this.renderActivities();
             }
         } else {
