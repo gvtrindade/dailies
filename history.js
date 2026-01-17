@@ -98,7 +98,7 @@ class ActivityHistory {
             : 0;
             
             const dateParts = date.split("-");
-            const dateObj = new Date(dateParts[0], dateParts[1], dateParts[2]);
+            const dateObj = new Date(dateParts[0], parseInt(dateParts[1]) - 1, dateParts[2]);
             const formattedDate = dateObj.toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
