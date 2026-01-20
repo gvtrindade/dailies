@@ -1,36 +1,28 @@
 // Register service worker only in production
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () {
-        const isProduction = location.hostname.includes("dailies.trindade.dev");
+    navigator.serviceWorker.register('/sw.js')
+    .then(function (registration) {
+        console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
-        if (isProduction) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(function (registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        // Check for service worker updates
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            console.log('New service worker found');
 
-                    // Check for service worker updates
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        console.log('New service worker found');
+            newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New service worker is available, show update prompt
+                    console.log('New version available');
+                    showUpdatePrompt();
+                }
+            });
+        });
 
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // New service worker is available, show update prompt
-                                console.log('New version available');
-                                showUpdatePrompt();
-                            }
-                        });
-                    });
-
-                    // Check for updates immediately
-                    registration.update();
-                })
-                .catch(function (err) {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-        } else {
-            console.log('Development mode detected - ServiceWorker registration skipped');
-        }
+        // Check for updates immediately
+        registration.update();
+    })
+    .catch(function (err) {
+        console.log('ServiceWorker registration failed: ', err);
     });
 } else {
     console.log('Service workers not supported');
@@ -195,10 +187,12 @@ function checkPWACompatibility() {
 
     // Check icons
     const manifestIcons = [
-        'assets/icon_144.png',
-        'assets/icon_192.png',
-        'assets/icon_256.png',
-        'assets/icon_512.png'
+        'assets/icons/android/android-launchericon-48-48.png',
+        'assets/icons/android/android-launchericon-72-72.png',
+        'assets/icons/android/android-launchericon-96-96.png',
+        'assets/icons/android/android-launchericon-144-144.png',
+        'assets/icons/android/android-launchericon-192-192.png',
+        'assets/icons/android/android-launchericon-512-512.png',
     ];
 
     Promise.all(
@@ -232,9 +226,6 @@ function checkPWACompatibility() {
 
 // Run compatibility check
 setTimeout(checkPWACompatibility, 1000);
-
-// Initialize the tracker when the page loads
-const tracker = new DailyActivitiesTracker();
 
 // Current day activities are no longer saved on page unload
 // They are only saved during the 3 AM reset to ensure only previous days are recorded
@@ -351,3 +342,44 @@ window.addEventListener('appinstalled', (evt) => {
 
     setTimeout(() => successMsg.remove(), 3000);
 });
+
+// Install button click handler
+function promptInstall() {
+    if (!deferredPrompt) {
+        // Enhanced debugging
+        const debugInfo = {
+            userAgent: navigator.userAgent,
+            isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+            hasServiceWorker: !!navigator.serviceWorker,
+            protocol: location.protocol,
+            https: location.protocol === 'https:' || location.hostname === 'localhost'
+        };
+        
+        console.log('History page install debug info:', debugInfo);
+        
+        const issues = [];
+        if (!debugInfo.https) issues.push('HTTPS required');
+        if (!debugInfo.hasServiceWorker) issues.push('Service Worker not supported');
+        
+        const message = issues.length > 0 
+            ? `Cannot install: ${issues.join(', ')}. Try:\n\n1. Using HTTPS or localhost\n2. Spending 30+ seconds on site\n3. Tapping around the app\n4. Updating Chrome to latest version`
+            : 'Install not available. Make sure you spend at least 30 seconds on the site and tap around before trying to install.';
+        
+        alert(message);
+        return;
+    }
+
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+        console.log(`User response to install prompt: ${choiceResult.outcome}`);
+        deferredPrompt = null;
+        
+        const btn = document.getElementById('install-btn');
+        if (btn) btn.style.display = 'none';
+        
+        if (choiceResult.outcome === 'accepted') {
+            localStorage.setItem('pwaInstalled', 'true');
+            localStorage.setItem('pwaInstallDate', new Date().toISOString());
+        }
+    });
+}

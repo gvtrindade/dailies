@@ -8,6 +8,7 @@ class ActivityHistory {
     init() {
         this.setupEventListeners();
         this.setDefaultDates();
+        this.updateHistory();
         this.renderHistory();
         this.updateSummary();
     }
@@ -32,29 +33,6 @@ class ActivityHistory {
         localStorage.setItem('activityHistory', JSON.stringify(this.history));
     }
 
-    recordDailyActivity() {
-        // Get the current "day" based on the 3 AM reset logic
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const currentDay = now.getHours() >= 3 ? today : new Date(today.getTime() - (24 * 60 * 60 * 1000));
-        const dayKey = currentDay.toISOString().split('T')[0];
-        
-        const activities = this.loadActivities();
-        
-        this.history[dayKey] = {
-            activities: activities.map(activity => ({
-                id: activity.id,
-                name: activity.name,
-                completed: activity.completed,
-                timestamp: new Date().toISOString()
-            })),
-            totalActivities: activities.length,
-            completedActivities: activities.filter(a => a.completed).length
-        };
-        
-        this.saveHistory();
-    }
-
     setDefaultDates() {
         const today = new Date();
         const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
@@ -75,6 +53,17 @@ class ActivityHistory {
     clearFilter() {
         this.setDefaultDates();
         this.renderHistory();
+    }
+
+    updateHistory() {
+        let changedHistory = false;
+        Object.keys(this.history).forEach(day => {
+            if (this.history[day].totalActivities === 0) {
+                delete this.history[day];
+            }
+        });
+
+        if (changedHistory) this.saveHistory();
     }
 
     renderHistory(startDate = null, endDate = null) {
@@ -220,217 +209,5 @@ class ActivityHistory {
     }
 }
 
-// Register service worker only in production
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && location.protocol === 'https:';
-        
-        if (isProduction) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(function(registration) {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-
-                    // Check for service worker updates
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        console.log('New service worker found');
-                        
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // New service worker is available, show update prompt
-                                console.log('New version available');
-                                showUpdatePrompt();
-                            }
-                        });
-                    });
-
-                    // Check for updates immediately
-                    registration.update();
-                })
-                .catch(function(err) {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-        } else {
-            console.log('Development mode detected - ServiceWorker registration skipped');
-        }
-    });
-} else {
-    console.log('Service workers not supported');
-}
-
-// Update management (shared with main page)
-let updatePromptShown = false;
-let updateDismissedCount = 0;
-const UPDATE_DISMISSAL_THRESHOLD = 3; // Auto-update after 3 dismissals
-
-function showUpdatePrompt() {
-    // Check if we should auto-update after 24 hours or 3 dismissals
-    const lastDismissal = localStorage.getItem('updateLastDismissed');
-    const now = Date.now();
-    const twentyFourHours = 24 * 60 * 60 * 1000;
-    
-    if (lastDismissal && (now - parseInt(lastDismissal)) > twentyFourHours) {
-        // Auto-update after 24 hours
-        console.log('Auto-updating after 24 hours');
-        applyUpdate();
-        return;
-    }
-    
-    if (updateDismissedCount >= UPDATE_DISMISSAL_THRESHOLD) {
-        // Auto-update after 3 dismissals
-        console.log('Auto-updating after 3 dismissals');
-        applyUpdate();
-        return;
-    }
-    
-    // Don't show if already shown in this session
-    if (updatePromptShown) {
-        return;
-    }
-    
-    updatePromptShown = true;
-    
-    // Create update banner
-    const updateBanner = document.createElement('div');
-    updateBanner.id = 'update-banner';
-    updateBanner.className = 'update-banner';
-    updateBanner.innerHTML = `
-        <div class="update-banner-content">
-            <span class="update-message">🔄 New version available</span>
-            <div class="update-actions">
-                <button id="update-now-btn" class="btn-update-now">Refresh Now</button>
-                <button id="update-later-btn" class="btn-update-later">Later</button>
-            </div>
-        </div>
-    `;
-    
-    // Add to page
-    document.body.appendChild(updateBanner);
-    
-    // Add event listeners
-    document.getElementById('update-now-btn').addEventListener('click', () => {
-        applyUpdate();
-    });
-    
-    document.getElementById('update-later-btn').addEventListener('click', () => {
-        dismissUpdateBanner();
-    });
-    
-    // Show with animation
-    setTimeout(() => {
-        updateBanner.classList.add('show');
-    }, 100);
-}
-
-function applyUpdate() {
-    console.log('Applying update...');
-    
-    // Remove banner
-    const banner = document.getElementById('update-banner');
-    if (banner) {
-        banner.remove();
-    }
-    
-    // Tell service worker to skip waiting
-    if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-    }
-    
-    // Reload page after a short delay
-    setTimeout(() => {
-        window.location.reload();
-    }, 100);
-}
-
-function dismissUpdateBanner() {
-    console.log('Update dismissed');
-    
-    // Update dismissal count and timestamp
-    updateDismissedCount++;
-    localStorage.setItem('updateDismissedCount', updateDismissedCount.toString());
-    localStorage.setItem('updateLastDismissed', Date.now().toString());
-    
-    // Remove banner with animation
-    const banner = document.getElementById('update-banner');
-    if (banner) {
-        banner.classList.remove('show');
-        setTimeout(() => {
-            banner.remove();
-        }, 300);
-    }
-}
-
-// Load dismissal count from localStorage
-updateDismissedCount = parseInt(localStorage.getItem('updateDismissedCount') || '0');
-
 // Initialize history page
 const historyTracker = new ActivityHistory();
-
-// Install button handling for history page
-let deferredPromptHistory;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPromptHistory = e;
-    
-    // Check if already installed
-    if (localStorage.getItem('pwaInstalled') === 'true') {
-        console.log('PWA already installed');
-        return;
-    }
-    
-    const installBtn = document.getElementById('install-btn');
-    if (installBtn) installBtn.style.display = 'inline-flex';
-});
-
-// Install button click handler
-const installBtn = document.getElementById('install-btn');
-if (installBtn) {
-    installBtn.addEventListener('click', () => {
-        if (!deferredPromptHistory) {
-            // Enhanced debugging
-            const debugInfo = {
-                userAgent: navigator.userAgent,
-                isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
-                hasServiceWorker: !!navigator.serviceWorker,
-                protocol: location.protocol,
-                https: location.protocol === 'https:' || location.hostname === 'localhost'
-            };
-            
-            console.log('History page install debug info:', debugInfo);
-            
-            const issues = [];
-            if (!debugInfo.https) issues.push('HTTPS required');
-            if (!debugInfo.hasServiceWorker) issues.push('Service Worker not supported');
-            
-            const message = issues.length > 0 
-                ? `Cannot install: ${issues.join(', ')}. Try:\n\n1. Using HTTPS or localhost\n2. Spending 30+ seconds on site\n3. Tapping around the app\n4. Updating Chrome to latest version`
-                : 'Install not available. Make sure you spend at least 30 seconds on the site and tap around before trying to install.';
-            
-            alert(message);
-            return;
-        }
-
-        deferredPromptHistory.prompt();
-        deferredPromptHistory.userChoice.then((choiceResult) => {
-            console.log(`User response to install prompt: ${choiceResult.outcome}`);
-            deferredPromptHistory = null;
-            
-            const btn = document.getElementById('install-btn');
-            if (btn) btn.style.display = 'none';
-            
-            if (choiceResult.outcome === 'accepted') {
-                localStorage.setItem('pwaInstalled', 'true');
-                localStorage.setItem('pwaInstallDate', new Date().toISOString());
-            }
-        });
-    });
-}
-
-// Handle app installed event
-window.addEventListener('appinstalled', (evt) => {
-    console.log('App was installed');
-    
-    const installBtn = document.getElementById('install-btn');
-    if (installBtn) installBtn.style.display = 'none';
-});

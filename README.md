@@ -55,9 +55,6 @@ For local development with PWA support, use the provided script:
 
 ```bash
 # Quick start with mobile testing guide
-./start-pwa.sh
-
-# Or manually:
 npx http-server -p 8000 -C-0
 ```
 

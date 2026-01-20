@@ -2,7 +2,7 @@
 const isProduction = location.hostname.includes("dailies.trindade.dev");
 
 // Dynamic cache version with timestamp
-const CACHE_VERSION = 'v2.2';
+const CACHE_VERSION = "1768931815";
 const CACHE_NAME = `daily-activities-${CACHE_VERSION}`;
 const urlsToCache = [
   '/',

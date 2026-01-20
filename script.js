@@ -184,16 +184,22 @@ class DailyActivitiesTracker {
 
     updateCurrentDayHistory() {
         const dayKey = this.getCurrentDayKey();
-        this.history[dayKey] = {
-            activities: this.activities.map(activity => ({
-                id: activity.id,
-                name: activity.name,
-                completed: activity.completed,
-                timestamp: new Date().toISOString()
-            })),
-            totalActivities: this.activities.length,
-            completedActivities: this.activities.filter(a => a.completed).length
-        };
+        if (this.activities.length > 0) {
+            this.history[dayKey] = {
+                activities: this.activities.map(activity => ({
+                    id: activity.id,
+                    name: activity.name,
+                    completed: activity.completed,
+                    timestamp: new Date().toISOString()
+                })),
+                totalActivities: this.activities.length,
+                completedActivities: this.activities.filter(a => a.completed).length
+            };
+        } else {
+            if (this.history[dayKey]) {
+                delete this.history[dayKey];
+            }
+        }
         this.saveHistory();
     }
 
@@ -258,7 +264,7 @@ class DailyActivitiesTracker {
         if (now.getHours() >= 3 && (!lastReset || lastReset < today)) {
             // Record yesterday's activity before reset - use getCurrentDayKey to get correct day
             const yesterdayKey = this.getCurrentDayKeyForDate(new Date(today.getTime() - (24 * 60 * 60 * 1000)));
-            if (!this.history[yesterdayKey]) {
+            if (!this.history[yesterdayKey] && this.activities.length > 0) {
                 this.history[yesterdayKey] = {
                     activities: this.activities.map(activity => ({
                         id: activity.id,
@@ -302,6 +308,7 @@ class DailyActivitiesTracker {
             this.activities.push(...newActivities);
             this.saveActivities();
             this.renderActivities();
+            this.updateCurrentDayHistory();
             input.value = '';
         }
     }
