@@ -3,7 +3,7 @@
 # Get current timestamp
 TIMESTAMP=$(date +%s)
 
-# Update sw.js with the current timestamp
-sed -i "s/\${TIMESTAMP}/$TIMESTAMP/g" sw.js
+# Update CACHE_VERSION constant directly
+sed -i "s/const CACHE_VERSION = .*/const CACHE_VERSION = $TIMESTAMP;/" sw.js
 
 echo "Updated sw.js with timestamp: $TIMESTAMP"
