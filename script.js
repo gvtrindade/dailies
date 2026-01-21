@@ -6,6 +6,7 @@ class DailyActivitiesTracker {
         this.isReorderMode = false;
         this.draggedElement = null;
         this.draggedIndex = null;
+        this.placeholder = null;
 
         this.init();
     }
@@ -77,75 +78,6 @@ class DailyActivitiesTracker {
         }
 
         this.renderActivities();
-    }
-
-    setupDragAndDrop(element, index) {
-        element.setAttribute('draggable', 'true');
-
-        element.addEventListener('dragstart', (e) => {
-            this.draggedElement = element;
-            this.draggedIndex = index;
-            element.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', element.innerHTML);
-        });
-
-        element.addEventListener('dragend', (e) => {
-            element.classList.remove('dragging');
-            this.draggedElement = null;
-            this.draggedIndex = null;
-        });
-
-        element.addEventListener('dragover', (e) => {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-            e.dataTransfer.dropEffect = 'move';
-
-            const container = document.getElementById('activities-container');
-            const afterElement = this.getDragAfterElement(container, e.clientY);
-
-            if (afterElement == null) {
-                container.appendChild(this.draggedElement);
-            } else {
-                container.insertBefore(this.draggedElement, afterElement);
-            }
-
-            return false;
-        });
-
-        element.addEventListener('drop', (e) => {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-
-            if (this.draggedIndex !== null) {
-                const newIndex = Array.from(element.parentNode.children).indexOf(this.draggedElement);
-
-                if (this.draggedIndex !== newIndex) {
-                    const [movedItem] = this.activities.splice(this.draggedIndex, 1);
-                    this.activities.splice(newIndex, 0, movedItem);
-                    this.saveActivities();
-                }
-            }
-
-            return false;
-        });
-    }
-
-    getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.activity-item:not(.dragging)')];
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
     updateCurrentDate() {
@@ -412,6 +344,256 @@ class DailyActivitiesTracker {
         }
     }
 
+    makePlaceholder(draggedTask) {
+        const placeholder = document.createElement('div');
+        placeholder.classList.add('activity-item-placeholder');
+        placeholder.style.height = `${draggedTask.offsetHeight}px`;
+        return placeholder;
+    }
+
+    movePlaceholder(event, container) {
+        if (!event.dataTransfer.types.includes('activity')) {
+            return;
+        }
+        event.preventDefault();
+
+        // Must exist because the ID is added for all drag events with an "activity" data entry
+        const draggedTask = document.getElementById('dragged-task');
+        if (!draggedTask) return;
+
+        const existingPlaceholder = container.querySelector('.activity-item-placeholder');
+
+        // If there's already a placeholder, and the cursor is still inside it, don't change anything
+        if (existingPlaceholder) {
+            const placeholderRect = existingPlaceholder.getBoundingClientRect();
+            if (placeholderRect.top <= event.clientY && placeholderRect.bottom >= event.clientY) {
+                return;
+            }
+        }
+
+        // Get all activity items in the container
+        const activityItems = Array.from(container.querySelectorAll('.activity-item'));
+
+        // Find the first task that is not fully above the cursor
+        for (const task of activityItems) {
+            if (task.getBoundingClientRect().bottom >= event.clientY) {
+                if (task === existingPlaceholder) return;
+                existingPlaceholder?.remove();
+                // Don't add placeholder if we're inserting exactly where the dragged item started
+                if (task === draggedTask || task.previousElementSibling === draggedTask) {
+                    return;
+                }
+                container.insertBefore(
+                    existingPlaceholder || this.makePlaceholder(draggedTask),
+                    task
+                );
+                return;
+            }
+        }
+
+        // If we get here, all existing tasks are above the cursor - insert at end
+        existingPlaceholder?.remove();
+        if (activityItems[activityItems.length - 1] === draggedTask) return;
+        container.append(existingPlaceholder || this.makePlaceholder(draggedTask));
+    }
+
+    setupDragAndDrop(item, index) {
+        const container = document.getElementById('activities-container');
+        
+        // Helper to get current index from DOM
+        const getCurrentIndex = (element) => {
+            return parseInt(element.dataset.index);
+        };
+        
+        // ==================== DESKTOP: Drag Events (MDN Pattern) ====================
+        
+        item.addEventListener('dragstart', (e) => {
+            this.draggedElement = item;
+            this.draggedIndex = getCurrentIndex(item);
+            
+            // Mark with ID for easy identification
+            item.id = 'dragged-task';
+            
+            e.dataTransfer.effectAllowed = 'move';
+            // Custom type to identify an activity drag
+            e.dataTransfer.setData('activity', '');
+        });
+
+        item.addEventListener('dragend', (e) => {
+            // Clean up ID
+            item.removeAttribute('id');
+            
+            // Remove any remaining placeholder
+            const placeholder = container.querySelector('.activity-item-placeholder');
+            placeholder?.remove();
+            
+            this.draggedElement = null;
+            this.draggedIndex = null;
+        });
+
+        // Container-level dragover handler (only attach once)
+        if (!container.dataset.dragoverAttached) {
+            container.dataset.dragoverAttached = 'true';
+            
+            container.addEventListener('dragover', (e) => {
+                this.movePlaceholder(e, container);
+            });
+
+            container.addEventListener('dragleave', (e) => {
+                // If we are moving into a child element, we aren't actually leaving the container
+                if (container.contains(e.relatedTarget)) return;
+                const placeholder = container.querySelector('.activity-item-placeholder');
+                placeholder?.remove();
+            });
+
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+
+                const draggedTask = document.getElementById('dragged-task');
+                const placeholder = container.querySelector('.activity-item-placeholder');
+                
+                if (!placeholder || !draggedTask) return;
+
+                // Remove dragged task from DOM
+                draggedTask.remove();
+                
+                // Insert at placeholder position
+                container.insertBefore(draggedTask, placeholder);
+                
+                // Remove placeholder
+                placeholder.remove();
+
+                // Now update the activities array to match DOM order
+                const newOrder = Array.from(container.querySelectorAll('.activity-item')).map(el => {
+                    const activityId = parseFloat(el.dataset.activityId);
+                    return this.activities.find(a => a.id === activityId);
+                }).filter(Boolean);
+
+                this.activities = newOrder;
+                this.saveActivities();
+                this.updateCurrentDayHistory();
+                
+                // Re-render to ensure everything is in sync
+                this.renderActivities();
+            });
+        }
+
+        // ==================== MOBILE: Touch Events ====================
+        
+        item.addEventListener('touchstart', (e) => {
+            if (!this.isReorderMode) return;
+            
+            this.draggedElement = item;
+            this.draggedIndex = getCurrentIndex(item);
+            
+            const touch = e.touches[0];
+            this.touchStartY = touch.clientY;
+            
+            // Create placeholder at current position
+            this.placeholder = this.makePlaceholder(item);
+            item.parentNode.insertBefore(this.placeholder, item);
+            
+            // Visual feedback
+            item.style.opacity = '0.4';
+            item.style.zIndex = '1000';
+            item.style.position = 'relative';
+            
+            e.preventDefault();
+        }, { passive: false });
+    
+        item.addEventListener('touchmove', (e) => {
+            if (!this.isReorderMode || !this.draggedElement) return;
+            
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            this.touchCurrentY = touch.clientY;
+            
+            // Move the element visually
+            const deltaY = this.touchCurrentY - this.touchStartY;
+            item.style.transform = `translateY(${deltaY}px)`;
+            
+            // Get element under touch point
+            item.style.pointerEvents = 'none';
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            item.style.pointerEvents = '';
+            
+            const droppableBelow = elementBelow?.closest('.activity-item');
+            
+            // Move placeholder to show drop position
+            if (droppableBelow && droppableBelow !== item && this.placeholder) {
+                const rect = droppableBelow.getBoundingClientRect();
+                const middle = rect.top + rect.height / 2;
+                const insertBefore = touch.clientY < middle;
+                
+                const parent = droppableBelow.parentNode;
+                if (insertBefore) {
+                    parent.insertBefore(this.placeholder, droppableBelow);
+                } else {
+                    parent.insertBefore(this.placeholder, droppableBelow.nextSibling);
+                }
+            }
+        }, { passive: false });
+    
+        item.addEventListener('touchend', (e) => {
+            if (!this.isReorderMode || !this.draggedElement) return;
+            
+            // Reset visual state
+            item.style.opacity = '1';
+            item.style.transform = '';
+            item.style.zIndex = '';
+            item.style.position = '';
+            
+            // Calculate new position based on placeholder location
+            if (this.placeholder && this.placeholder.parentNode) {
+                const container = this.placeholder.parentNode;
+                
+                // Remove dragged item from DOM
+                item.remove();
+                
+                // Insert at placeholder position
+                container.insertBefore(item, this.placeholder);
+                
+                // Remove placeholder
+                this.placeholder.remove();
+                
+                // Now update the activities array to match DOM order
+                const newOrder = Array.from(container.querySelectorAll('.activity-item')).map(el => {
+                    const activityId = parseFloat(el.dataset.activityId);
+                    return this.activities.find(a => a.id === activityId);
+                }).filter(Boolean);
+
+                this.activities = newOrder;
+                this.saveActivities();
+                this.updateCurrentDayHistory();
+                
+                // Re-render to ensure everything is in sync
+                this.renderActivities();
+            } else {
+                // No placeholder, just clean up
+                this.placeholder?.remove();
+            }
+            
+            this.placeholder = null;
+            this.draggedElement = null;
+            this.draggedIndex = null;
+        });
+    
+        item.addEventListener('touchcancel', (e) => {
+            if (!this.isReorderMode) return;
+            
+            item.style.opacity = '1';
+            item.style.transform = '';
+            item.style.zIndex = '';
+            item.style.position = '';
+            
+            this.placeholder?.remove();
+            this.placeholder = null;
+            this.draggedElement = null;
+            this.draggedIndex = null;
+        });
+    }
+
     renderActivities() {
         const container = document.getElementById('activities-container');
 
@@ -423,7 +605,10 @@ class DailyActivitiesTracker {
         console.log('Rendering activities with current order:', this.activities.map((a, i) => `${i}: ${a.name}`));
 
         container.innerHTML = this.activities.map((activity, index) => `
-            <div class="activity-item ${this.isReorderMode ? 'reorder-mode' : ''}" data-activity-id="${activity.id}">
+            <div class="activity-item ${this.isReorderMode ? 'reorder-mode' : ''}" 
+                 data-activity-id="${activity.id}" 
+                 data-index="${index}"
+                 ${this.isReorderMode ? 'draggable="true"' : ''}>
                 ${this.isReorderMode ? '<div class="drag-handle">☰</div>' : ''}
                 ${!this.isReorderMode ? `<input type="checkbox" class="activity-checkbox" ${activity.completed ? 'checked' : ''} onchange="tracker.handleCheckboxClick(event, ${activity.id})">` : ''}
                 <span class="activity-text ${activity.completed ? 'completed' : ''}">${activity.name}</span>

@@ -187,13 +187,6 @@ button:hover {
     position: relative;
 }
 
-.activity-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-
-
 .btn-more {
     background: transparent;
     color: #999;
@@ -522,28 +515,53 @@ button:hover {
 
 .activity-item.reorder-mode {
     cursor: move;
-    user-select: none;
+    touch-action: none; /* Prevents browser gestures during drag */
 }
 
-.activity-item.dragging {
-    opacity: 0.5;
-    background: #e0e0e0;
+.activity-item.drag-over {
+    border-top: 2px solid #4CAF50;
 }
 
-.drag-handle {
-    font-size: 20px;
-    color: #999;
-    cursor: grab;
-    padding: 0 10px;
-    display: flex;
-    align-items: center;
-}
-
-.drag-handle:active {
-    cursor: grabbing;
+.activity-item[draggable="true"] {
+    cursor: move;
 }
 
 .activity-item.reorder-mode:hover {
     transform: none;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.activity-item-placeholder {
+    border: 2px dashed #4CAF50;
+    background-color: rgba(76, 175, 80, 0.1);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.placeholder-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    opacity: 0.7;
+}
+
+.placeholder-text {
+    color: #4CAF50;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.activity-item.reorder-mode {
+    cursor: move;
+    touch-action: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Grayed-out effect for dragged task */
+#dragged-task {
+    opacity: 0.2;
 }
