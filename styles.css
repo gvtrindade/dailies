@@ -2,6 +2,10 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 body {
@@ -141,6 +145,10 @@ main {
     border-radius: 8px;
     font-size: 16px;
     transition: border-color 0.3s;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
 
 #activity-input:focus {
@@ -236,6 +244,10 @@ button:hover {
 .activity-text.editing {
     background: white;
     border-color: #667eea;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
 
 .activity-text.completed {
@@ -515,7 +527,7 @@ button:hover {
 
 .activity-item.reorder-mode {
     cursor: move;
-    touch-action: none; /* Prevents browser gestures during drag */
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .activity-item.drag-over {
@@ -553,12 +565,6 @@ button:hover {
     color: #4CAF50;
     font-size: 14px;
     font-weight: 600;
-}
-
-.activity-item.reorder-mode {
-    cursor: move;
-    touch-action: none;
-    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 /* Grayed-out effect for dragged task */

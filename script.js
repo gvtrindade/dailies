@@ -7,6 +7,9 @@ class DailyActivitiesTracker {
         this.draggedElement = null;
         this.draggedIndex = null;
         this.placeholder = null;
+        this.longPressTimer = null;
+        this.isDraggingActive = false;
+        this.autoScrollInterval = null;
 
         this.init();
     }
@@ -397,6 +400,33 @@ class DailyActivitiesTracker {
         container.append(existingPlaceholder || this.makePlaceholder(draggedTask));
     }
 
+    startAutoScroll(clientY) {
+        // Clear any existing auto-scroll
+        this.stopAutoScroll();
+
+        const scrollThreshold = 100; // pixels from top/bottom to trigger scroll
+        const scrollSpeed = 10; // pixels per interval
+
+        this.autoScrollInterval = setInterval(() => {
+            const windowHeight = window.innerHeight;
+            
+            if (clientY < scrollThreshold) {
+                // Scroll up
+                window.scrollBy(0, -scrollSpeed);
+            } else if (clientY > windowHeight - scrollThreshold) {
+                // Scroll down
+                window.scrollBy(0, scrollSpeed);
+            }
+        }, 16); // ~60fps
+    }
+
+    stopAutoScroll() {
+        if (this.autoScrollInterval) {
+            clearInterval(this.autoScrollInterval);
+            this.autoScrollInterval = null;
+        }
+    }
+
     setupDragAndDrop(item, index) {
         const container = document.getElementById('activities-container');
         
@@ -483,35 +513,72 @@ class DailyActivitiesTracker {
         item.addEventListener('touchstart', (e) => {
             if (!this.isReorderMode) return;
             
-            this.draggedElement = item;
-            this.draggedIndex = getCurrentIndex(item);
-            
             const touch = e.touches[0];
             this.touchStartY = touch.clientY;
+            this.touchStartX = touch.clientX;
+            this.isDraggingActive = false;
             
-            // Create placeholder at current position
-            this.placeholder = this.makePlaceholder(item);
-            item.parentNode.insertBefore(this.placeholder, item);
+            // Start long-press timer (500ms)
+            this.longPressTimer = setTimeout(() => {
+                // Long press activated - start drag
+                this.isDraggingActive = true;
+                this.draggedElement = item;
+                this.draggedIndex = getCurrentIndex(item);
+                
+                // Create placeholder at current position
+                this.placeholder = this.makePlaceholder(item);
+                item.parentNode.insertBefore(this.placeholder, item);
+                
+                // Visual feedback
+                item.style.opacity = '0.4';
+                item.style.zIndex = '1000';
+                item.style.position = 'relative';
+                item.style.touchAction = 'none';
+                
+                // Add a slight scale effect for feedback
+                item.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    if (this.isDraggingActive) {
+                        item.style.transform = '';
+                    }
+                }, 200);
+                
+            }, 500); // 500ms long press
             
-            // Visual feedback
-            item.style.opacity = '0.4';
-            item.style.zIndex = '1000';
-            item.style.position = 'relative';
-            
-            e.preventDefault();
-        }, { passive: false });
+            // Don't prevent default - allow scrolling until long-press activates
+        }, { passive: true });
     
         item.addEventListener('touchmove', (e) => {
-            if (!this.isReorderMode || !this.draggedElement) return;
-            
-            e.preventDefault();
+            if (!this.isReorderMode) return;
             
             const touch = e.touches[0];
+            const deltaX = Math.abs(touch.clientX - this.touchStartX);
+            const deltaY = Math.abs(touch.clientY - this.touchStartY);
+            
+            // If user moves finger before long-press completes, cancel it
+            if (!this.isDraggingActive && (deltaX > 10 || deltaY > 10)) {
+                clearTimeout(this.longPressTimer);
+                return; // Don't prevent default - allow scrolling
+            }
+            
+            // Only prevent default and handle drag if long-press was activated
+            if (!this.isDraggingActive || !this.draggedElement) return;
+            
+            e.preventDefault(); // Only prevent default when actively dragging
+            
             this.touchCurrentY = touch.clientY;
             
             // Move the element visually
-            const deltaY = this.touchCurrentY - this.touchStartY;
-            item.style.transform = `translateY(${deltaY}px)`;
+            const deltaYFromStart = this.touchCurrentY - this.touchStartY;
+            item.style.transform = `translateY(${deltaYFromStart}px)`;
+            
+            // Check if near top or bottom of screen for auto-scroll
+            const windowHeight = window.innerHeight;
+            if (touch.clientY < 100 || touch.clientY > windowHeight - 100) {
+                this.startAutoScroll(touch.clientY);
+            } else {
+                this.stopAutoScroll();
+            }
             
             // Get element under touch point
             item.style.pointerEvents = 'none';
@@ -536,13 +603,23 @@ class DailyActivitiesTracker {
         }, { passive: false });
     
         item.addEventListener('touchend', (e) => {
-            if (!this.isReorderMode || !this.draggedElement) return;
+            // Clear long-press timer
+            clearTimeout(this.longPressTimer);
+            this.stopAutoScroll();
+            
+            if (!this.isReorderMode) return;
+            
+            // If drag wasn't activated (no long-press), just clean up
+            if (!this.isDraggingActive) {
+                return;
+            }
             
             // Reset visual state
             item.style.opacity = '1';
             item.style.transform = '';
             item.style.zIndex = '';
             item.style.position = '';
+            item.style.touchAction = '';
             
             // Calculate new position based on placeholder location
             if (this.placeholder && this.placeholder.parentNode) {
@@ -577,20 +654,26 @@ class DailyActivitiesTracker {
             this.placeholder = null;
             this.draggedElement = null;
             this.draggedIndex = null;
+            this.isDraggingActive = false;
         });
     
         item.addEventListener('touchcancel', (e) => {
+            clearTimeout(this.longPressTimer);
+            this.stopAutoScroll();
+            
             if (!this.isReorderMode) return;
             
             item.style.opacity = '1';
             item.style.transform = '';
             item.style.zIndex = '';
             item.style.position = '';
+            item.style.touchAction = '';
             
             this.placeholder?.remove();
             this.placeholder = null;
             this.draggedElement = null;
             this.draggedIndex = null;
+            this.isDraggingActive = false;
         });
     }
 
