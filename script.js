@@ -11,6 +11,8 @@ class DailyActivitiesTracker {
         this.isDraggingActive = false;
         this.autoScrollRequest = null;
         this.currentTouchY = 0;
+        this.currentTouchX = 0;
+        this.touchStartScrollY = 0;
 
         this.init();
     }
@@ -401,6 +403,34 @@ class DailyActivitiesTracker {
         container.append(existingPlaceholder || this.makePlaceholder(draggedTask));
     }
 
+    updateDraggingPosition() {
+        if (!this.isDraggingActive || !this.draggedElement) return;
+
+        const scrollDelta = window.scrollY - this.touchStartScrollY;
+        const deltaYFromStart = (this.currentTouchY - this.touchStartY) + scrollDelta;
+        
+        this.draggedElement.style.transform = `translateY(${deltaYFromStart}px)`;
+
+        // Update placeholder
+        this.draggedElement.style.pointerEvents = 'none';
+        const elementBelow = document.elementFromPoint(this.currentTouchX, this.currentTouchY);
+        this.draggedElement.style.pointerEvents = '';
+        
+        const droppableBelow = elementBelow?.closest('.activity-item');
+        if (droppableBelow && droppableBelow !== this.draggedElement && this.placeholder) {
+            const rect = droppableBelow.getBoundingClientRect();
+            const middle = rect.top + rect.height / 2;
+            const insertBefore = this.currentTouchY < middle;
+            
+            const parent = droppableBelow.parentNode;
+            if (insertBefore) {
+                parent.insertBefore(this.placeholder, droppableBelow);
+            } else {
+                parent.insertBefore(this.placeholder, droppableBelow.nextSibling);
+            }
+        }
+    }
+
     startAutoScroll() {
         if (this.autoScrollRequest) return;
 
@@ -421,6 +451,7 @@ class DailyActivitiesTracker {
 
             if (speed !== 0) {
                 window.scrollBy(0, speed);
+                this.updateDraggingPosition();
                 this.autoScrollRequest = requestAnimationFrame(scroll);
             } else {
                 this.autoScrollRequest = null;
@@ -526,6 +557,9 @@ class DailyActivitiesTracker {
             const touch = e.touches[0];
             this.touchStartY = touch.clientY;
             this.touchStartX = touch.clientX;
+            this.currentTouchY = touch.clientY;
+            this.currentTouchX = touch.clientX;
+            this.touchStartScrollY = window.scrollY;
             this.isDraggingActive = false;
             
             // Start long-press timer (500ms)
@@ -577,34 +611,13 @@ class DailyActivitiesTracker {
             e.preventDefault(); // Only prevent default when actively dragging
             
             this.currentTouchY = touch.clientY;
+            this.currentTouchX = touch.clientX;
             
-            // Move the element visually
-            const deltaYFromStart = this.currentTouchY - this.touchStartY;
-            item.style.transform = `translateY(${deltaYFromStart}px)`;
+            // Move the element visually and update placeholder
+            this.updateDraggingPosition();
             
             // Handle auto-scroll
             this.startAutoScroll();
-            
-            // Get element under touch point
-            item.style.pointerEvents = 'none';
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-            item.style.pointerEvents = '';
-            
-            const droppableBelow = elementBelow?.closest('.activity-item');
-            
-            // Move placeholder to show drop position
-            if (droppableBelow && droppableBelow !== item && this.placeholder) {
-                const rect = droppableBelow.getBoundingClientRect();
-                const middle = rect.top + rect.height / 2;
-                const insertBefore = touch.clientY < middle;
-                
-                const parent = droppableBelow.parentNode;
-                if (insertBefore) {
-                    parent.insertBefore(this.placeholder, droppableBelow);
-                } else {
-                    parent.insertBefore(this.placeholder, droppableBelow.nextSibling);
-                }
-            }
         }, { passive: false });
     
         item.addEventListener('touchend', (e) => {
