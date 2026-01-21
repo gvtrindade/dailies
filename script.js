@@ -9,7 +9,8 @@ class DailyActivitiesTracker {
         this.placeholder = null;
         this.longPressTimer = null;
         this.isDraggingActive = false;
-        this.autoScrollInterval = null;
+        this.autoScrollRequest = null;
+        this.currentTouchY = 0;
 
         this.init();
     }
@@ -400,30 +401,39 @@ class DailyActivitiesTracker {
         container.append(existingPlaceholder || this.makePlaceholder(draggedTask));
     }
 
-    startAutoScroll(clientY) {
-        // Clear any existing auto-scroll
-        this.stopAutoScroll();
+    startAutoScroll() {
+        if (this.autoScrollRequest) return;
 
-        const scrollThreshold = 100; // pixels from top/bottom to trigger scroll
-        const scrollSpeed = 10; // pixels per interval
-
-        this.autoScrollInterval = setInterval(() => {
+        const scroll = () => {
+            const threshold = 100;
+            const maxSpeed = 15;
             const windowHeight = window.innerHeight;
-            
-            if (clientY < scrollThreshold) {
-                // Scroll up
-                window.scrollBy(0, -scrollSpeed);
-            } else if (clientY > windowHeight - scrollThreshold) {
-                // Scroll down
-                window.scrollBy(0, scrollSpeed);
+            let speed = 0;
+
+            if (this.currentTouchY < threshold) {
+                // Closer to top = faster
+                speed = -maxSpeed * (1 - this.currentTouchY / threshold);
+            } else if (this.currentTouchY > windowHeight - threshold) {
+                // Closer to bottom = faster
+                const offset = this.currentTouchY - (windowHeight - threshold);
+                speed = maxSpeed * (offset / threshold);
             }
-        }, 16); // ~60fps
+
+            if (speed !== 0) {
+                window.scrollBy(0, speed);
+                this.autoScrollRequest = requestAnimationFrame(scroll);
+            } else {
+                this.autoScrollRequest = null;
+            }
+        };
+
+        this.autoScrollRequest = requestAnimationFrame(scroll);
     }
 
     stopAutoScroll() {
-        if (this.autoScrollInterval) {
-            clearInterval(this.autoScrollInterval);
-            this.autoScrollInterval = null;
+        if (this.autoScrollRequest) {
+            cancelAnimationFrame(this.autoScrollRequest);
+            this.autoScrollRequest = null;
         }
     }
 
@@ -566,19 +576,14 @@ class DailyActivitiesTracker {
             
             e.preventDefault(); // Only prevent default when actively dragging
             
-            this.touchCurrentY = touch.clientY;
+            this.currentTouchY = touch.clientY;
             
             // Move the element visually
-            const deltaYFromStart = this.touchCurrentY - this.touchStartY;
+            const deltaYFromStart = this.currentTouchY - this.touchStartY;
             item.style.transform = `translateY(${deltaYFromStart}px)`;
             
-            // Check if near top or bottom of screen for auto-scroll
-            const windowHeight = window.innerHeight;
-            if (touch.clientY < 100 || touch.clientY > windowHeight - 100) {
-                this.startAutoScroll(touch.clientY);
-            } else {
-                this.stopAutoScroll();
-            }
+            // Handle auto-scroll
+            this.startAutoScroll();
             
             // Get element under touch point
             item.style.pointerEvents = 'none';
@@ -685,9 +690,16 @@ class DailyActivitiesTracker {
             return;
         }
 
-        console.log('Rendering activities with current order:', this.activities.map((a, i) => `${i}: ${a.name}`));
+        let instructionHtml = '';
+        if (this.isReorderMode) {
+            const isMobile = window.innerWidth <= 600;
+            const message = isMobile 
+                ? "Press and hold an activity to start moving" 
+                : "Click and drag an activity to move it";
+            instructionHtml = `<p class="reorder-instruction">${message}</p>`;
+        }
 
-        container.innerHTML = this.activities.map((activity, index) => `
+        const activitiesHtml = this.activities.map((activity, index) => `
             <div class="activity-item ${this.isReorderMode ? 'reorder-mode' : ''}" 
                  data-activity-id="${activity.id}" 
                  data-index="${index}"
@@ -704,6 +716,8 @@ class DailyActivitiesTracker {
                 ` : ''}
             </div>
         `).join('');
+
+        container.innerHTML = instructionHtml + activitiesHtml;
 
         // Setup drag and drop for reorder mode
         if (this.isReorderMode) {
